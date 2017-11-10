@@ -9,14 +9,18 @@ module Contingency where
 import Data.Maybe
 import Data.List
 
--- Game logic stub ---------------------------------------------------------------------------------
-
+-- Datas ------------------------------------------------------------------------------------------
 data ContingencyPlayer = PlayerTrue | PlayerFalse deriving (Eq, Show, Enum)
 data ContingencyGame   = Board [Piece] -- 7*7 = 49
-data ContingencyAction = Move Operador Bool (Int,Int)
+instance Show ContingencyGame where
+  show b = showBoard b
+
+data ContingencyAction = Vertical String (Int,Int) | Horizontal String (Int,Int)
+instance Show ContingencyAction where
+  show a = showAction a
 
 data Piece = Empty | Hidden Bool | True_ | False_ | OpAnd Bool
-             | OpOr Bool | OpIff Bool | OpXor Bool
+           | OpOr Bool | OpIff Bool | OpXor Bool
 instance Show Piece where
   show Empty = "."
   show (Hidden _) = "0"
@@ -26,6 +30,8 @@ instance Show Piece where
   show (OpOr _) = "|"
   show (OpIff _) = "i"
   show (OpXor _) = "x"
+
+-- Game logic stub ---------------------------------------------------------------------------------
 
 type Operador = (Bool -> Bool -> Bool)
 iff, xor :: Operador
@@ -59,7 +65,14 @@ showBoard :: ContingencyGame -> String
 showBoard (Board b) = unlines $ map concat $ chunksOf 7 (map show b)
 
 showAction :: ContingencyAction -> String
-showAction _ = error "showAction has not been implemented!" --TODO
+showAction (Vertical "iff" t) = "i " ++ (show t)
+showAction (Horizontal "iff" t) = "I " ++ (show t)
+showAction (Vertical "xor" t) = "i " ++ (show t)
+showAction (Horizontal "xor" t) = "I " ++ (show t)
+showAction (Vertical "and" t) = "a " ++ (show t)
+showAction (Horizontal "and" t) = "A " ++ (show t)
+showAction (Vertical "or" t) = "o " ++ (show t)
+showAction (Horizontal "or" t) = "O " ++ (show t)
 
 readAction :: String -> ContingencyAction
 readAction _ = error "readAction has not been implemented!" --TODO
@@ -92,15 +105,7 @@ runOnConsole = do
   runMatch (PlayerTrue, PlayerFalse) board
 
 -- Auxiliar ---------------------------------------------------------------------------------------
-{-chunksOf :: Int -> [e] -> [[e]]
-chunksOf i ls = map (take i) (build (splitter ls)) where
-  splitter :: [e] -> ([e] -> a -> a) -> a -> a
-  splitter [] _ n = n
-  splitter l c n  = l `c` splitter (drop i l) c n
 
-build :: ((a -> [a] -> [a]) -> [a] -> [a]) -> [a]
-build g = g (:) []
--}
 chunksOf :: Int -> [a] -> [[a]]
 chunksOf n xs = map (map snd) $ groupBy groupFunction (zip [0..] xs)
                 where groupFunction (i1,_) (i2,_) = (div i1 n) == (div i2 n)
