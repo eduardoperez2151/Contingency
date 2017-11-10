@@ -11,8 +11,15 @@ import Data.Maybe
 -- Game logic stub ---------------------------------------------------------------------------------
 
 data ContingencyPlayer = PlayerTrue | PlayerFalse deriving (Eq, Show, Enum)
-data ContingencyGame = 
-data ContingencyAction =
+data ContingencyGame   = Board [Piece] -- 7*7 = 49
+data ContingencyAction = Move Operador Bool (Int,Int)
+
+data Piece = Empty | Hidden Bool | True_ | False_ | Op Operador Bool
+
+type Operador = (Bool -> Bool -> Bool)
+iff, xor :: Operador
+iff p q = (p && q) || ((not p) && (not q))
+xor p q = ((not p) && q) || (p && (not q))
 
 beginning :: IO ContingencyGame
 beginning = error "beginning has not been implemented!" --TODO
