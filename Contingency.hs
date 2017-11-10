@@ -7,6 +7,7 @@
 module Contingency where
 
 import Data.Maybe
+import Data.List
 
 -- Game logic stub ---------------------------------------------------------------------------------
 
@@ -24,8 +25,13 @@ xor p q = ((not p) && q) || (p && (not q))
 beginning :: IO ContingencyGame
 beginning = error "beginning has not been implemented!" --TODO
 
+emptyBoard :: ContingencyGame
+emptyBoard = Board (replicate 74 Empty)
+
 activePlayer :: ContingencyGame -> Maybe ContingencyPlayer
-activePlayer _ = error "activePlayer has not been implemented!" --TODO
+activePlayer g@(Board b)
+  | isFinished g = Nothing
+  | otherwise = if even $ length [x | Op x _ <- b] then (Just PlayerTrue) else (Just PlayerFalse)
 
 actions :: ContingencyGame -> ContingencyPlayer -> [ContingencyAction]
 actions _ _ = error "actions has not been implemented!" --TODO
@@ -34,7 +40,7 @@ nextState :: ContingencyGame -> ContingencyPlayer -> ContingencyAction -> IO Con
 nextState _ _ _ = error "nextState has not been implemented!" --TODO
 
 isFinished :: ContingencyGame -> Bool
-isFinished _ = error "isFinished has not been implemented!" --TODO
+isFinished (Board b) = length [x | Op x _ <- b] == 30
 
 score :: ContingencyGame -> ContingencyPlayer -> Int
 score _ _ = error "score has not been implemented!" --TODO
