@@ -57,10 +57,10 @@ actions :: ContingencyGame -> ContingencyPlayer -> [ContingencyAction]
 actions _ _ = error "actions has not been implemented!" --TODO
 
 nextState :: ContingencyGame -> ContingencyPlayer -> ContingencyAction -> IO ContingencyGame
-nextState g@(Board b) p (Action str (x,y) d) = let index = x*7+y in
-                                             if (b!!index) == Empty && (activePlayer g) == (Just p) then
-                                               do return (Board (insertAt b (piece str d) index))
-                                             else error "!!!"
+nextState g@(Board b) p (Action str c@(x,y) d) = let i = index c in
+                                               if (b!!i) == Empty && (activePlayer g) == (Just p) then
+                                                 do return (Board (insertAt b (piece str d) i))
+                                               else error "!!!"
 
 isFinished :: ContingencyGame -> Bool
 isFinished (Board b) = countOp b == 30
@@ -135,3 +135,6 @@ piece str d
   | str == "or"  = (OpOr d)
   | str == "and" = (OpAnd d)
   | otherwise = error "!!!"
+
+index :: (Int,Int) -> Int
+index (x,y) = 7*x+y
