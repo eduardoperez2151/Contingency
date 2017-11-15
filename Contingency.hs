@@ -11,16 +11,20 @@ import Data.List
 
 -- Datas ------------------------------------------------------------------------------------------
 data ContingencyPlayer = PlayerTrue | PlayerFalse deriving (Eq, Show, Enum)
+
 data ContingencyGame   = Board [Piece] -- 7*7 = 49
 instance Show ContingencyGame where
   show b = showBoard b
 
-data ContingencyAction = Vertical String (Int,Int) | Horizontal String (Int,Int)
+data Direction = Vertical | Horizontal deriving (Show, Eq)
+
+data ContingencyAction = Action String (Int,Int) Direction
+
 instance Show ContingencyAction where
   show a = showAction a
 
-data Piece = Empty | Hidden Bool | True_ | False_ | OpAnd Bool
-           | OpOr Bool | OpIff Bool | OpXor Bool
+data Piece = Empty | Hidden Bool | True_ | False_ | OpAnd Direction
+           | OpOr Direction | OpIff Direction | OpXor Direction deriving Eq
 instance Show Piece where
   show Empty = "."
   show (Hidden _) = "0"
@@ -53,7 +57,10 @@ actions :: ContingencyGame -> ContingencyPlayer -> [ContingencyAction]
 actions _ _ = error "actions has not been implemented!" --TODO
 
 nextState :: ContingencyGame -> ContingencyPlayer -> ContingencyAction -> IO ContingencyGame
-nextState _ _ _ = error "nextState has not been implemented!" --TODO
+nextState g@(Board b) p (Action str (x,y) d) = let index = x*7+y in
+                                             if (b!!index) == Empty && (activePlayer g) == (Just p) then
+                                               do return (Board (insertAt b (piece str d) index))
+                                             else error "!!!"
 
 isFinished :: ContingencyGame -> Bool
 isFinished (Board b) = countOp b == 30
@@ -65,14 +72,14 @@ showBoard :: ContingencyGame -> String
 showBoard (Board b) = unlines $ map concat $ chunksOf 7 (map show b)
 
 showAction :: ContingencyAction -> String
-showAction (Vertical "iff" t) = "i " ++ (show t)
-showAction (Horizontal "iff" t) = "I " ++ (show t)
-showAction (Vertical "xor" t) = "i " ++ (show t)
-showAction (Horizontal "xor" t) = "I " ++ (show t)
-showAction (Vertical "and" t) = "a " ++ (show t)
-showAction (Horizontal "and" t) = "A " ++ (show t)
-showAction (Vertical "or" t) = "o " ++ (show t)
-showAction (Horizontal "or" t) = "O " ++ (show t)
+showAction (Action "iff" t Vertical) = "i " ++ (show t)
+showAction (Action "iff" t Horizontal) = "I " ++ (show t)
+showAction (Action "xor" t Vertical) = "x " ++ (show t)
+showAction (Action "xor" t Horizontal) = "X " ++ (show t)
+showAction (Action "and" t Vertical) = "a " ++ (show t)
+showAction (Action "and" t Horizontal) = "A " ++ (show t)
+showAction (Action "or" t Vertical) = "o " ++ (show t)
+showAction (Action "or" t Horizontal) = "O " ++ (show t)
 
 readAction :: String -> ContingencyAction
 readAction _ = error "readAction has not been implemented!" --TODO
@@ -117,3 +124,14 @@ countOp b = sum $ map fun b
                           fun True_ = 0
                           fun False_ = 0
                           fun _ = 1
+
+insertAt :: [a] -> a -> Int -> [a]
+insertAt l e i = (take i l) ++ (e:(drop (i+1) l))
+
+piece :: String -> Direction -> Piece
+piece str d
+  | str == "iff" = (OpIff d)
+  | str == "xor" = (OpXor d)
+  | str == "or"  = (OpOr d)
+  | str == "and" = (OpAnd d)
+  | otherwise = error "!!!"
