@@ -8,11 +8,12 @@ module Contingency where
 
 import Data.Maybe
 import Data.List
+import Data.Char
 
 -- Datas ------------------------------------------------------------------------------------------
 data ContingencyPlayer = PlayerTrue | PlayerFalse deriving (Eq, Show, Enum)
 
-data ContingencyGame   = Board [Piece] -- 7*7 = 49
+data ContingencyGame   = Board [Piece] [String] -- 7*7 = 49
 instance Show ContingencyGame where
   show b = showBoard b
 
@@ -45,44 +46,65 @@ xor p q = ((not p) && q) || (p && (not q))
 beginning :: IO ContingencyGame
 beginning = error "beginning has not been implemented!" --TODO
 
+--9 AND de dos operandos, 9 OR de dos operandos, 6 XOR de dos operandos, 6 IFF (si y sólo si) de dos operandos
 emptyBoard :: ContingencyGame
-emptyBoard = Board (replicate 49 Empty)
+emptyBoard = Board (replicate 49 Empty) ((replicate 9 "and") ++ (replicate 9 "or") ++ (replicate 6 "xor") ++ (replicate 6 "iff"))
 
 activePlayer :: ContingencyGame -> Maybe ContingencyPlayer
-activePlayer g@(Board b)
+activePlayer g@(Board b _)
   | isFinished g = Nothing
   | otherwise = if even (countOp b) then (Just PlayerTrue) else (Just PlayerFalse)
 
-actions :: ContingencyGame -> ContingencyPlayer -> [ContingencyAction]
-actions _ _ = error "actions has not been implemented!" --TODO
+actions :: ContingencyGame -> ContingencyPlayer -> String -> [ContingencyAction]
+actions g@(Board b _) p str = foldl (fun str) [] (emptyPositions g)
+                            where fun str l (x,y)
+                                    | elem (x-1,y) adj && elem (x+1,y) adj = if (elem (x,y-1) adj && elem (x,y+1) adj)
+                                                                             then (Action str (x,y) Horizontal):((Action str (x,y) Vertical):l)
+                                                                             else (Action str (x,y) Horizontal):l
+                                    | elem (x,y-1) adj && elem (x,y+1) adj = if (elem (x-1,y) adj && elem (x+1,y) adj)
+                                                                             then (Action str (x,y) Horizontal):((Action str (x,y) Vertical):l)
+                                                                             else (Action str (x,y) Vertical):l
+                                    | otherwise = l
+                                      where adj = fullPositions g
 
 nextState :: ContingencyGame -> ContingencyPlayer -> ContingencyAction -> IO ContingencyGame
-nextState g@(Board b) p (Action str c@(x,y) d) = let i = index c in
+nextState g@(Board b bag) p (Action str (x,y) d) = let i = toIndex (x,y) in
                                                if (b!!i) == Empty && (activePlayer g) == (Just p) then
-                                                 do return (Board (insertAt b (piece str d) i))
+                                                 do return (Board (insertAt b (piece str d) i) bag)
                                                else error "!!!"
 
 isFinished :: ContingencyGame -> Bool
-isFinished (Board b) = countOp b == 30
+isFinished g@(Board b bag) = (countOp b == 30) || (null bag)
 
 score :: ContingencyGame -> ContingencyPlayer -> Int
 score _ _ = error "score has not been implemented!" --TODO
 
 showBoard :: ContingencyGame -> String
-showBoard (Board b) = unlines $ map concat $ chunksOf 7 (map show b)
+showBoard (Board b bag) = (unlines $ map concat $ chunksOf 7 (map show b)) ++ (unwords bag)
 
 showAction :: ContingencyAction -> String
-showAction (Action "iff" t Vertical) = "i " ++ (show t)
-showAction (Action "iff" t Horizontal) = "I " ++ (show t)
-showAction (Action "xor" t Vertical) = "x " ++ (show t)
-showAction (Action "xor" t Horizontal) = "X " ++ (show t)
-showAction (Action "and" t Vertical) = "a " ++ (show t)
-showAction (Action "and" t Horizontal) = "A " ++ (show t)
-showAction (Action "or" t Vertical) = "o " ++ (show t)
-showAction (Action "or" t Horizontal) = "O " ++ (show t)
+showAction (Action "iff" c Vertical) = "i " ++ (show c)
+showAction (Action "iff" c Horizontal) = "I " ++ (show c)
+showAction (Action "xor" c Vertical) = "x " ++ (show c)
+showAction (Action "xor" c Horizontal) = "X " ++ (show c)
+showAction (Action "and" c Vertical) = "a " ++ (show c)
+showAction (Action "and" c Horizontal) = "A " ++ (show c)
+showAction (Action "or" c Vertical) = "o " ++ (show c)
+showAction (Action "or" c Horizontal) = "O " ++ (show c)
 
 readAction :: String -> ContingencyAction
-readAction _ = error "readAction has not been implemented!" --TODO
+readAction str
+    | l!!0 == "i" = (Action "iff" c Vertical)
+    | l!!0 == "I" = (Action "iff" c Horizontal)
+    | l!!0 == "x" = (Action "xor" c Vertical)
+    | l!!0 == "X" = (Action "xor" c Horizontal)
+    | l!!0 == "a" = (Action "and" c Vertical)
+    | l!!0 == "A" = (Action "and" c Horizontal)
+    | l!!0 == "o" = (Action "or" c Vertical)
+    | l!!0 == "O" = (Action "or" c Horizontal)
+    | otherwise = error "!!!"
+      where l = words str
+            c = read (l!!1)
 
 -- Match controller --------------------------------------------------------------------------------
 type Agent = ContingencyGame -> ContingencyPlayer -> IO ContingencyAction
@@ -136,5 +158,20 @@ piece str d
   | str == "and" = (OpAnd d)
   | otherwise = error "!!!"
 
-index :: (Int,Int) -> Int
-index (x,y) = 7*x+y
+toIndex :: (Int,Int) -> Int
+toIndex (x,y) = 7*x+y
+
+fromIndex :: Int -> (Int,Int)
+fromIndex i = (div i 7, mod i 7)
+
+emptyPositions :: ContingencyGame -> [(Int,Int)]
+emptyPositions (Board b _) = [fromIndex i | i<-(elemIndices Empty b)]
+
+fullPositions :: ContingencyGame -> [(Int,Int)]
+fullPositions (Board b _) = [fromIndex (fromJust (elemIndex x b))| x<-b,x/=Empty]
+
+adjacent :: (Int,Int) -> [(Int,Int)]
+adjacent (x,y) = [(a,b) | a<-[x-1..x+1],b<-[y-1..y+1],a<7,a>=0,b>=0,b<7,(a,b)/=(x,y)]
+
+deleteAt :: [a] -> Int -> [a]
+deleteAt l i = (take i l) ++ (drop (i+1) l)
